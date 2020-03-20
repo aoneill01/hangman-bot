@@ -18,9 +18,23 @@ let messageDetails;
 let userName;
 
 app.command('/hangman', async ({ ack, command, context }) => {
+    if (!/^[a-zA-Z]+$/.test(command.text)) {
+        ack({
+            text: 'Suggestion must be a single word, only letters.',
+            response_type: 'ephemeral'
+        });
+        return;
+    } 
+
+    if (gameStatus() == Status.IN_PROGRESS) {
+        ack({
+            text: 'Please finish the current game before suggesting a new word.',
+            response_type: 'ephemeral'
+        });
+        return;
+    } 
+
     ack();
-    
-    if (!/^[a-zA-Z]+$/.test(command.text)) return; 
 
     word = command.text.toUpperCase();
     guesses = [];
@@ -93,9 +107,9 @@ ${guessesString()}
 \`\`\``;
 
     if (status == Status.LOST) {
-        message += `\n:skull_and_crossbones: *You lose. The word was ${word}.* :skull_and_crossbones:`;
+        message += `\n:skull_and_crossbones: *You lose. The word was ${word}.* :skull_and_crossbones: Suggest a new word with \`/hangman [word]\``;
     } else if (status == Status.WON) {
-        message += '\n:tada: *You win!* :tada:';
+        message += '\n:tada: *You win!* :tada: Suggest a new word with `/hangman [word]`';
     } else {
         message += `\n_Word suggested by <@${userName}>. Please guess in thread._`;
     }
