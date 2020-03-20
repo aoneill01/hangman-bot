@@ -5,7 +5,14 @@ const app = new App({
     token: process.env.SLACK_BOT_TOKEN,
 });
 
-let word = "WORD";
+const Status = {
+    NOT_STARTED: 'not_started',
+    IN_PROGRESS: 'in_progress',
+    WON: 'won',
+    LOST: 'lost'
+};
+
+let word;
 let guesses = [];
 let messageDetails;
 
@@ -26,6 +33,13 @@ app.message(/^new word ([a-zA-Z]+)$/, async ({ context, message, say }) => {
 });
 
 app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
+    const status = gameStatus();
+    if (status == Status.NOT_STARTED) {
+        say('No game found');
+        return;
+    }
+    if (status != Status.IN_PROGRESS) return;
+
     const letter = context.matches[1].toUpperCase();
 
     if (!guesses.includes(letter)) {
@@ -58,8 +72,9 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
 });
 
 function generateMessage() {
+    const status = gameStatus();
     const incorrectCount = calculateIncorrectCount();
-    return `\`\`\`
+    let message = `\`\`\`
  ━━┳━━┓ 
    ${incorrectCount > 0 ? '☹︎' : ' '}  ┃
   ${incorrectCount > 4 ? '/' : ' '}${incorrectCount > 1 ? '|' : ' '}${incorrectCount > 5 ? '\\' : ' '} ┃        ${blanksString()}
@@ -67,6 +82,16 @@ function generateMessage() {
    ━━━┻━━━
 ${guessesString()}
 \`\`\``;
+
+    if (status == Status.LOST) {
+        message += '\n:skull_and_crossbones: *You lose* :skull_and_crossbones:';
+    } else if (status == Status.WON) {
+        message += '\n:tada: *You win* :tada:';
+    } else {
+        message += '\n_Please guess in thread_';
+    }
+
+    return message;
 }
 
 function calculateIncorrectCount() {
@@ -79,6 +104,13 @@ function guessesString() {
 
 function blanksString() {
     return Array.from(word).reduce((acc, c) => `${acc} ${guesses.includes(c) ? c : '_'}`, '');
+}
+
+function gameStatus() {
+    if (!word || !messageDetails) return Status.NOT_STARTED;
+    if (calculateIncorrectCount() > 5) return Status.LOST;
+    if (Array.from(word).every(c => guesses.includes(c))) return Status.WON;
+    return Status.IN_PROGRESS;
 }
 
 (async () => {
