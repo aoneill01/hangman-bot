@@ -7,19 +7,53 @@ const app = new App({
 
 let word = "WORD";
 let guesses = [];
+let messageDetails;
 
-app.message(/^([a-zA-Z])[!?]*$/, async ({ context, say }) => {
+app.message(/^new word ([a-zA-Z]+)$/, async ({ context, message, say }) => {
+    word = context.matches[1].toUpperCase();
+    guesses = [];
+
+    const result = await app.client.chat.postMessage({
+        token: context.botToken,
+        channel: message.channel,
+        text: generateMessage()
+    });
+    messageDetails = {
+        channel: result.channel,
+        ts: result.ts,
+        token: context.botToken
+    };
+});
+
+app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
     const letter = context.matches[1].toUpperCase();
+
     if (!guesses.includes(letter)) {
         guesses.push(letter);
     } else {
         say(`*${letter}* has already been guessed.`);
         return;
     }
+
+    app.client.chat.update({
+        ...messageDetails,
+        text: generateMessage()
+    });
+
     if (word.includes(letter)) {
-        say(`${generateMessage()}\n${letter} *is* in the word! :tada:`);
+        app.client.reactions.add({
+            token: context.botToken,
+            name: 'tada',
+            channel: message.channel,
+            timestamp: message.ts
+        });
     } else {
-        say(`${generateMessage()}\nSorry, ${letter} is not in the word. :disappointed:`);
+        app.client.reactions.add({
+            token: context.botToken,
+            name: 'skull_and_crossbones',
+            channel: message.channel,
+            timestamp: message.ts
+        });
     }
 });
 
