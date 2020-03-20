@@ -6,17 +6,46 @@ const app = new App({
 });
 
 let word = "WORD";
-let incorrectCount = 0;
+let guesses = [];
 
 app.message(/^([a-zA-Z])[!?]*$/, async ({ context, say }) => {
     const letter = context.matches[1].toUpperCase();
-    if (word.includes(letter)) {
-        say(`${letter} *is* in the word! :tada:`);
+    if (!guesses.includes(letter)) {
+        guesses.push(letter);
     } else {
-        incorrectCount++;
-        say(`Sorry, ${letter} is not in the word. :disappointed: You have made ${incorrectCount} incorrect guesses.`);
+        say(`*${letter}* has already been guessed.`);
+        return;
+    }
+    if (word.includes(letter)) {
+        say(`${generateMessage()}\n${letter} *is* in the word! :tada:`);
+    } else {
+        say(`${generateMessage()}\nSorry, ${letter} is not in the word. :disappointed:`);
     }
 });
+
+function generateMessage() {
+    const incorrectCount = calculateIncorrectCount();
+    return `\`\`\`
+ ━━┳━━┓ 
+   ${incorrectCount > 0 ? '☹︎' : ' '}  ┃
+  ${incorrectCount > 4 ? '/' : ' '}${incorrectCount > 1 ? '|' : ' '}${incorrectCount > 5 ? '\\' : ' '} ┃        ${blanksString()}
+  ${incorrectCount > 2 ? '/' : ' '} ${incorrectCount > 3 ? '\\' : ' '} ┃
+   ━━━┻━━━
+${guessesString()}
+\`\`\``;
+}
+
+function calculateIncorrectCount() {
+    return guesses.reduce((acc, c) => word.includes(c) ? acc : acc + 1, 0);
+}
+
+function guessesString() {
+    return guesses.reduce((acc, c) => `${acc} ${c}${word.includes(c) ? '✔' : '✗'}`, '');
+}
+
+function blanksString() {
+    return Array.from(word).reduce((acc, c) => `${acc} ${guesses.includes(c) ? c : '_'}`, '');
+}
 
 (async () => {
     // Start the app
