@@ -15,16 +15,25 @@ const Status = {
 let word;
 let guesses = [];
 let messageDetails;
+let userName;
 
-app.message(/^new word ([a-zA-Z]+)$/, async ({ context, message, say }) => {
-    word = context.matches[1].toUpperCase();
+app.command('/hangman', async ({ ack, command, context }) => {
+    ack();
+    
+    if (!/^[a-zA-Z]+$/.test(command.text)) return; 
+
+    word = command.text.toUpperCase();
     guesses = [];
+    userName = command.user_name;
+
+    console.log(`Starting game with ${word}.`);
 
     const result = await app.client.chat.postMessage({
         token: context.botToken,
-        channel: message.channel,
+        channel: command.channel_id,
         text: generateMessage()
     });
+
     messageDetails = {
         channel: result.channel,
         ts: result.ts,
@@ -84,11 +93,11 @@ ${guessesString()}
 \`\`\``;
 
     if (status == Status.LOST) {
-        message += '\n:skull_and_crossbones: *You lose* :skull_and_crossbones:';
+        message += `\n:skull_and_crossbones: *You lose. The word was ${word}.* :skull_and_crossbones:`;
     } else if (status == Status.WON) {
-        message += '\n:tada: *You win* :tada:';
+        message += '\n:tada: *You win!* :tada:';
     } else {
-        message += '\n_Please guess in thread_';
+        message += `\n_Word suggested by <@${userName}>. Please guess in thread._`;
     }
 
     return message;
