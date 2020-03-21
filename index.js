@@ -12,6 +12,7 @@ const Status = {
     LOST: 'lost'
 };
 
+const games = {};
 let word;
 let guesses = [];
 let messageDetails;
@@ -26,7 +27,7 @@ app.command('/hangman', async ({ ack, command, context }) => {
         return;
     } 
 
-    if (gameStatus() == Status.IN_PROGRESS) {
+    if (gameStatus(command.channel_id) == Status.IN_PROGRESS) {
         ack({
             text: 'Please finish the current game before suggesting a new word.',
             response_type: 'ephemeral'
@@ -36,19 +37,22 @@ app.command('/hangman', async ({ ack, command, context }) => {
 
     ack();
 
-    word = command.text.toUpperCase();
-    guesses = [];
-    userName = command.user_name;
+    if (!games[command.channel_id]) games[command.channel_id] = {};
+    const game = games[command.channel_id];
 
-    console.log(`Starting game with ${word}.`);
+    game.word = command.text.toUpperCase();
+    game.guesses = [];
+    game.userName = command.user_name;
+
+    console.log(`Starting game with ${game.word}.`);
 
     const result = await app.client.chat.postMessage({
         token: context.botToken,
         channel: command.channel_id,
-        text: generateMessage()
+        text: generateMessage(command.channel_id)
     });
 
-    messageDetails = {
+    game.messageDetails = {
         channel: result.channel,
         ts: result.ts,
         token: context.botToken
@@ -56,14 +60,15 @@ app.command('/hangman', async ({ ack, command, context }) => {
 });
 
 app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
-    const status = gameStatus();
+    const status = gameStatus(message.channel);
     if (status == Status.NOT_STARTED) {
-        say('No game found');
+        console.log('No game found');
         return;
     }
     if (status != Status.IN_PROGRESS) return;
 
     const letter = context.matches[1].toUpperCase();
+    const { guesses, word, messageDetails } = games[message.channel];
 
     if (!guesses.includes(letter)) {
         guesses.push(letter);
@@ -74,7 +79,7 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
 
     app.client.chat.update({
         ...messageDetails,
-        text: generateMessage()
+        text: generateMessage(message.channel)
     });
 
     if (word.includes(letter)) {
@@ -94,16 +99,17 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
     }
 });
 
-function generateMessage() {
-    const status = gameStatus();
-    const incorrectCount = calculateIncorrectCount();
+function generateMessage(channel) {
+    const status = gameStatus(channel);
+    const incorrectCount = calculateIncorrectCount(channel);
+    const { word, userName } = games[channel];
     let message = `\`\`\`
  ━━┳━━┓ 
    ${incorrectCount > 0 ? '☹︎' : ' '}  ┃
-  ${incorrectCount > 4 ? '/' : ' '}${incorrectCount > 1 ? '|' : ' '}${incorrectCount > 5 ? '\\' : ' '} ┃        ${blanksString()}
+  ${incorrectCount > 4 ? '/' : ' '}${incorrectCount > 1 ? '|' : ' '}${incorrectCount > 5 ? '\\' : ' '} ┃        ${blanksString(channel)}
   ${incorrectCount > 2 ? '/' : ' '} ${incorrectCount > 3 ? '\\' : ' '} ┃
    ━━━┻━━━
-${guessesString()}
+${guessesString(channel)}
 \`\`\``;
 
     if (status == Status.LOST) {
@@ -111,27 +117,32 @@ ${guessesString()}
     } else if (status == Status.WON) {
         message += '\n:tada: *You win!* :tada: Suggest a new word with `/hangman [word]`';
     } else {
-        message += `\n_Word suggested by <@${userName}>. Please guess in thread._`;
+        message += `\n_Word suggested by <@${userName}>. Please reply in thread._`;
     }
 
     return message;
 }
 
-function calculateIncorrectCount() {
+function calculateIncorrectCount(channel) {
+    const { word, guesses } = games[channel];
     return guesses.reduce((acc, c) => word.includes(c) ? acc : acc + 1, 0);
 }
 
-function guessesString() {
+function guessesString(channel) {
+    const { word, guesses } = games[channel];
     return guesses.reduce((acc, c) => `${acc} ${c}${word.includes(c) ? '✔' : '✗'}`, '');
 }
 
-function blanksString() {
+function blanksString(channel) {
+    const { word, guesses } = games[channel];
     return Array.from(word).reduce((acc, c) => `${acc} ${guesses.includes(c) ? c : '_'}`, '');
 }
 
-function gameStatus() {
+function gameStatus(channel) {
+    if (!games[channel]) return Status.NOT_STARTED;
+    const { word, guesses, messageDetails } = games[channel];
     if (!word || !messageDetails) return Status.NOT_STARTED;
-    if (calculateIncorrectCount() > 5) return Status.LOST;
+    if (calculateIncorrectCount(channel) > 5) return Status.LOST;
     if (Array.from(word).every(c => guesses.includes(c))) return Status.WON;
     return Status.IN_PROGRESS;
 }
