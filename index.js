@@ -12,6 +12,9 @@ const Status = {
     LOST: 'lost'
 };
 
+const successEmoji = [ 'tada', 'parrot', 'white_check_mark', 'banana-dance', 'gopher-dance' ];
+const failureEmoji = [ 'skull_and_crossbones', 'x', 'man-gesturing-no', 'blob_dead', 'coffin' ];
+
 const games = {};
 let word;
 let guesses = [];
@@ -85,25 +88,29 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
     if (word.includes(letter)) {
         app.client.reactions.add({
             token: context.botToken,
-            name: 'tada',
+            name: randomEmoji(successEmoji),
             channel: message.channel,
             timestamp: message.ts
         });
     } else {
         app.client.reactions.add({
             token: context.botToken,
-            name: 'skull_and_crossbones',
+            name: randomEmoji(failureEmoji),
             channel: message.channel,
             timestamp: message.ts
         });
     }
 });
 
+function randomEmoji(options) {
+    return options[Math.floor(Math.random() * options.length)];
+}
+
 function generateMessage(channel) {
     const status = gameStatus(channel);
     const incorrectCount = calculateIncorrectCount(channel);
     const { word, userName } = games[channel];
-    let message = `\`\`\`
+    let message = `_Word suggested by <@${userName}>._\n\`\`\`
  ━━┳━━┓ 
    ${incorrectCount > 0 ? '☹︎' : ' '}  ┃
   ${incorrectCount > 4 ? '/' : ' '}${incorrectCount > 1 ? '|' : ' '}${incorrectCount > 5 ? '\\' : ' '} ┃        ${blanksString(channel)}
@@ -115,9 +122,9 @@ ${guessesString(channel)}
     if (status == Status.LOST) {
         message += `\n:skull_and_crossbones: *You lose. The word was ${word}.* :skull_and_crossbones: Suggest a new word with \`/hangman [word]\``;
     } else if (status == Status.WON) {
-        message += '\n:tada: *You win!* :tada: Suggest a new word with `/hangman [word]`';
+        message += `\n:tada: *You win!* :tada: Suggest a new word with \`/hangman [word]\``;
     } else {
-        message += `\n_Word suggested by <@${userName}>. Please reply in thread._`;
+        message += `\nPlease reply in thread._`;
     }
 
     return message;
