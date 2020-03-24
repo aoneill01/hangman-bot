@@ -60,6 +60,13 @@ app.command('/hangman', async ({ ack, command, context }) => {
         ts: result.ts,
         token: context.botToken
     };
+
+    app.client.chat.postMessage({
+        token: context.botToken,
+        channel: command.channel_id,
+        thread_ts: result.ts,
+        text: 'There are 6 guesses.'
+    });
 });
 
 app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
@@ -110,7 +117,7 @@ function generateMessage(channel) {
     const status = gameStatus(channel);
     const incorrectCount = calculateIncorrectCount(channel);
     const { word, userName } = games[channel];
-    let message = `_Word suggested by <@${userName}>._\n\`\`\`
+    let message = `Word suggested by <@${userName}>.\n\`\`\`
  ━━┳━━┓ 
    ${incorrectCount > 0 ? '☹︎' : ' '}  ┃
   ${incorrectCount > 4 ? '/' : ' '}${incorrectCount > 1 ? '|' : ' '}${incorrectCount > 5 ? '\\' : ' '} ┃        ${blanksString(channel)}
@@ -124,7 +131,7 @@ ${guessesString(channel)}
     } else if (status == Status.WON) {
         message += `\n:tada: *You win!* :tada: Suggest a new word with \`/hangman [word]\``;
     } else {
-        message += `\nPlease reply in thread._`;
+        message += `\n_Please reply in thread._`;
     }
 
     return message;
