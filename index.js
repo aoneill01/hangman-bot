@@ -21,20 +21,14 @@ let guesses = [];
 let messageDetails;
 let userName;
 
-app.command('/hangman', async ({ ack, command, context }) => {
+app.command('/hangman', async ({ ack, command, context, say }) => {
     if (!/^[a-zA-Z]+$/.test(command.text)) {
-        ack({
-            text: 'Suggestion must be a single word, only letters.',
-            response_type: 'ephemeral'
-        });
+        ephemeralAck('Suggestion must be a single word, only letters.', ack);
         return;
     } 
 
     if (gameStatus(command.channel_id) == Status.IN_PROGRESS) {
-        ack({
-            text: 'Please finish the current game before suggesting a new word.',
-            response_type: 'ephemeral'
-        });
+        ephemeralAck('Please finish the current game before suggesting a new word.', ack);
         return;
     } 
 
@@ -61,9 +55,7 @@ app.command('/hangman', async ({ ack, command, context }) => {
         token: context.botToken
     };
 
-    app.client.chat.postMessage({
-        token: context.botToken,
-        channel: command.channel_id,
+    say({
         thread_ts: result.ts,
         text: 'There are 6 guesses.'
     });
@@ -83,7 +75,14 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
     if (!guesses.includes(letter)) {
         guesses.push(letter);
     } else {
-        say(`*${letter}* has already been guessed.`);
+        if (message.thread_ts) {
+            say({
+                thread_ts: message.thread_ts,
+                text: `*${letter}* has already been guessed.`
+            });
+        } else {
+            say(`*${letter}* has already been guessed.`);
+        }
         return;
     }
 
@@ -92,21 +91,7 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
         text: generateMessage(message.channel)
     });
 
-    if (word.includes(letter)) {
-        app.client.reactions.add({
-            token: context.botToken,
-            name: randomEmoji(successEmoji),
-            channel: message.channel,
-            timestamp: message.ts
-        });
-    } else {
-        app.client.reactions.add({
-            token: context.botToken,
-            name: randomEmoji(failureEmoji),
-            channel: message.channel,
-            timestamp: message.ts
-        });
-    }
+    react(randomEmoji(word.includes(letter) ? successEmoji : failureEmoji), context.botToken, message);
 });
 
 function randomEmoji(options) {
@@ -159,6 +144,22 @@ function gameStatus(channel) {
     if (calculateIncorrectCount(channel) > 5) return Status.LOST;
     if (Array.from(word).every(c => guesses.includes(c))) return Status.WON;
     return Status.IN_PROGRESS;
+}
+
+function ephemeralAck(text, ack) {
+    ack({
+        text,
+        response_type: 'ephemeral'
+    });
+} 
+
+function react(name, token, message) {
+    app.client.reactions.add({
+        token,
+        name,
+        channel: message.channel,
+        timestamp: message.ts
+    });
 }
 
 (async () => {
