@@ -1,4 +1,6 @@
 const { App } = require('@slack/bolt');
+const Typo = require('typo-js');
+const wd = require('word-definition');
 const { HangmanGame, Status, createGame, getGame } = require('./game');
 
 const app = new App({
@@ -8,6 +10,8 @@ const app = new App({
 
 const successEmoji = [ 'tada', 'parrot', 'white_check_mark', 'banana-dance', 'gopher-dance' ];
 const failureEmoji = [ 'skull_and_crossbones', 'x', 'man-gesturing-no', 'blob_dead', 'coffin' ];
+
+const dictionary = new Typo('en_US');
 
 app.command('/hangman', async ({ ack, command, context, say }) => {
     if (!/^[a-zA-Z]+$/.test(command.text)) {
@@ -20,7 +24,12 @@ app.command('/hangman', async ({ ack, command, context, say }) => {
     if (existingGame && existingGame.status == Status.IN_PROGRESS) {
         ephemeralAck('Please finish the current game before suggesting a new word.', ack);
         return;
-    } 
+    }
+
+    if (!dictionary.check(command.text)) {
+        ephemeralAck(`I could not find ${command.text} in my dictionary. Did you mean ${dictionary.suggest(command.text).join(', ')}?`, ack);
+        return;
+    }
 
     ack();
 
@@ -42,7 +51,7 @@ app.command('/hangman', async ({ ack, command, context, say }) => {
 
     say({
         thread_ts: result.ts,
-        text: 'There are 6 guesses.'
+        text: '_Let me start the thread for you._'
     });
 });
 
@@ -76,6 +85,41 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
     });
 
     react(randomEmoji(game.word.includes(letter) ? successEmoji : failureEmoji), context.botToken, message);
+
+    if (game.status == Status.WON || game.status == Status.LOST) {
+        wd.getDef(game.word, 'en', null, definition => {
+            console.log('deifnition', definition);
+            if (definition && definition.definition) {
+                if (message.thread_ts) {
+                    say({
+                        thread_ts: message.thread_ts,
+                        text: `*${game.word}*: ${definition.definition}`
+                    });
+                } else {
+                    say(`*${game.word}*: ${definition.definition}`);
+                }
+            }
+        });
+    }
+});
+
+app.event('app_home_opened', async({ event, context }) => {
+    app.client.views.publish({
+        token: context.botToken,
+        user_id: event.user,
+        view: {
+            type: 'home',
+            blocks: [
+                {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*Welcome to Hangman*\n\nPlay a game of hangman with other people in a channel.\n\n*How to use*\n\n1. *Required*: Add this *hangman app* to the channel where you want to play.\n2. In the channel, use the slash command `/hangman [word]` to start a new game. _Don't worry, other users in the channel won't see the word._\n3. Everyone in the channel can guess letters by posting messages with a single letter."
+                    }
+                }
+            ]
+        }
+    });
 });
 
 function randomEmoji(options) {

@@ -9,6 +9,8 @@
   "author": "Andy O'Neill <aoneill01@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "@slack/bolt": "^1.8.0"
+    "@slack/bolt": "^1.8.0",
+    "typo-js": "^1.1.0",
+    "word-definition": "^2.1.6"
   }
 }
