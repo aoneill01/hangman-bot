@@ -2,6 +2,7 @@ const { App } = require('@slack/bolt');
 const Typo = require('typo-js');
 const wd = require('word-definition');
 const { HangmanGame, Status, createGame, getGame } = require('./game');
+const { getStats, getLeaderboard } = require('./stats');
 
 const app = new App({
     signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -33,7 +34,7 @@ app.command('/hangman', async ({ ack, command, context, say }) => {
 
     ack();
 
-    const game = createGame(command.channel_id, command.text.toUpperCase(), command.user_name);
+    const game = createGame(command.channel_id, command.text.toUpperCase(), command.user_id);
 
     console.log(`Starting game with ${game.word}.`);
 
@@ -77,7 +78,7 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
         return;
     }
 
-    game.guessLetter(letter);
+    game.guessLetter(letter, message.user);
 
     app.client.chat.update({
         ...game.messageDetails,
@@ -104,6 +105,9 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
 });
 
 app.event('app_home_opened', async({ event, context }) => {
+    const stats = getStats(event.user);
+    const leaderboard = getLeaderboard();
+
     app.client.views.publish({
         token: context.botToken,
         user_id: event.user,
@@ -115,6 +119,26 @@ app.event('app_home_opened', async({ event, context }) => {
                     "text": {
                       "type": "mrkdwn",
                       "text": "*Welcome to Hangman*\n\nPlay a game of hangman with other people in a channel.\n\n*How to use*\n\n1. *Required*: Add this *hangman app* to the channel where you want to play.\n2. In the channel, use the slash command `/hangman [word]` to start a new game. _Don't worry, other users in the channel won't see the word._\n3. Everyone in the channel can guess letters by posting messages with a single letter."
+                    }
+                },
+                {
+                    "type": "divider",
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": `*Personal Statistics*\n\n*Letters guessed*: ${stats.totalGuesses}\n*Correct guesses*: ${stats.correctGuesses} ${stats.totalGuesses != 0 ? "(" + Math.round(100 * stats.correctGuesses / stats.totalGuesses) + "%)" : ""}\n*Game winning guesses*: ${stats.winningGuesses}\n*Words suggested*: ${stats.wordsSuggested}\n*Your words resulting in a hanging*: ${stats.suggestionsHung} ${stats.wordsSuggested != 0 ? "(" + Math.round(100 * stats.suggestionsHung / stats.wordsSuggested) + "%)" : ""}`
+                    }
+                },
+                {
+                    "type": "divider",
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": `*Leaderboard*\n\n*Most guesses:*\n${ leaderboard.mostTotalGuesses.map(val => `• <@${val.player}> (${val.totalGuesses})`).join('\n') }\n\n*Most game winning guesses*:\n${ leaderboard.mostWinningGuesses.map(val => `• <@${val.player}> (${val.winningGuesses})`).join('\n') }\n\n*Most words suggested*:\n${ leaderboard.mostWordsSuggested.map(val => `• <@${val.player}> (${val.wordsSuggested})`).join('\n') }`
                     }
                 }
             ]
