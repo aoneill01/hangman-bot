@@ -138,13 +138,17 @@ app.event('app_home_opened', async({ event, context }) => {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": `*Leaderboard*\n\n*Most guesses:*\n${ leaderboard.mostTotalGuesses.map(val => `• <@${val.player}> (${val.totalGuesses})`).join('\n') }\n\n*Most game winning guesses*:\n${ leaderboard.mostWinningGuesses.map(val => `• <@${val.player}> (${val.winningGuesses})`).join('\n') }\n\n*Most words suggested*:\n${ leaderboard.mostWordsSuggested.map(val => `• <@${val.player}> (${val.wordsSuggested})`).join('\n') }`
+                        "text": `*Leaderboard*\n\n*Best guesses:* (% correct, min. 20 guesses)\n${ formatList(leaderboard.bestGuesses, val => `${Math.round(val.percentage)}%`) }\n\n*Most guesses:*\n${ formatList(leaderboard.mostTotalGuesses, val => val.totalGuesses) }\n\n*Most game winning guesses*:\n${ formatList(leaderboard.mostWinningGuesses, val => val.winningGuesses) }\n\n*Deadliest wordsmith*: (% lost, min. 5 words)\n${ formatList(leaderboard.deadliestWords, val => `${Math.round(val.percentage)}%`) }\n\n*Most words suggested*:\n${ formatList(leaderboard.mostWordsSuggested, val => val.wordsSuggested) }`
                     }
                 }
             ]
         }
     });
 });
+
+function formatList(list, getValue) {
+    return list.map(val => `• <@${val.player}> (${getValue(val)})`).join('\n');
+}
 
 function randomEmoji(options) {
     return options[Math.floor(Math.random() * options.length)];

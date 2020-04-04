@@ -32,7 +32,9 @@ function getLeaderboard() {
     return {
         mostTotalGuesses: topForProperty('totalGuesses'),
         mostWinningGuesses: topForProperty('winningGuesses'),
-        mostWordsSuggested: topForProperty('wordsSuggested')
+        bestGuesses: topForPercentage('correctGuesses', 'totalGuesses', 20),
+        mostWordsSuggested: topForProperty('wordsSuggested'),
+        deadliestWords: topForPercentage('suggestionsHung', 'wordsSuggested', 5)
     };
 }
 
@@ -41,6 +43,15 @@ function topForProperty(property) {
         .map(player => ({ player, [property]: stats.players[player][property] || 0 }))
         .sort((a, b) => b[property] - a[property])
         .filter(val => val[property] !== 0)
+        .slice(0, 3);
+}
+
+function topForPercentage(numerator, denominator, minDenominator) {
+    return Object.keys(stats.players)
+        .filter(player => stats.players[player][denominator] >= minDenominator)
+        .map(player => ({ player, percentage: 100 * (stats.players[player][numerator] || 0) / stats.players[player][denominator]}))
+        .sort((a, b) => b.percentage - a.percentage)
+        .filter(val => val.percentage !== 0)
         .slice(0, 3);
 }
 
