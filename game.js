@@ -1,3 +1,5 @@
+const { updateStatsForGuess, updateStatsForNewGame, updateStatsForCompletedGame }  = require('./stats');
+
 const Status = {
     NOT_STARTED: 'not_started',
     IN_PROGRESS: 'in_progress',
@@ -15,6 +17,7 @@ class HangmanGame {
         this.#word = word;
         this.#userName = userName;
         this.#guesses = [];
+        updateStatsForNewGame(userName);
     }
 
     get word() {
@@ -46,11 +49,19 @@ class HangmanGame {
         return this.#guesses.includes(letter);
     }
 
-    guessLetter(letter) {
+    guessLetter(letter, player) {
+        if (this.status === Status.WON || this.status === Status.LOST) return; 
+
         letter = letter.toUpperCase()[0];
 
         if (!this.hasLetterBeenGuessed(letter)) {
             this.#guesses.push(letter);
+            const won = this.status === Status.WON;
+            const lost = this.status === Status.LOST;
+            updateStatsForGuess(player, this.#word.includes(letter), won);
+            if (won || lost) {
+                updateStatsForCompletedGame(this.userName, won);
+            }
         }
     }
 }
