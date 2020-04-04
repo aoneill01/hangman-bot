@@ -2,7 +2,7 @@ const { App } = require('@slack/bolt');
 const Typo = require('typo-js');
 const wd = require('word-definition');
 const { HangmanGame, Status, createGame, getGame } = require('./game');
-const { getStats } = require('./stats');
+const { getStats, getLeaderboard } = require('./stats');
 
 const app = new App({
     signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -106,6 +106,7 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
 
 app.event('app_home_opened', async({ event, context }) => {
     const stats = getStats(event.user);
+    const leaderboard = getLeaderboard();
 
     app.client.views.publish({
         token: context.botToken,
@@ -127,7 +128,17 @@ app.event('app_home_opened', async({ event, context }) => {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": `*Personal Statistics*\n\n*Letters guessed*: ${stats.totalGuesses}\n*Correct guesses*: ${stats.correctGuesses} ${stats.totalGuesses != 0 ? "(" + Math.round(100 * stats.correctGuesses / stats.totalGuesses) + "%)" : ""}\n*Game winning guesses*: ${stats.winningGuesses}\n*Words suggested*: ${stats.wordsSuggested}\n*Your words successfully guessed by others*: ${stats.suggestionsGuessed} ${stats.wordsSuggested != 0 ? "(" + Math.round(100 * stats.suggestionsGuessed / stats.wordsSuggested) + "%)" : ""}`
+                        "text": `*Personal Statistics*\n\n*Letters guessed*: ${stats.totalGuesses}\n*Correct guesses*: ${stats.correctGuesses} ${stats.totalGuesses != 0 ? "(" + Math.round(100 * stats.correctGuesses / stats.totalGuesses) + "%)" : ""}\n*Game winning guesses*: ${stats.winningGuesses}\n*Words suggested*: ${stats.wordsSuggested}\n*Your words resulting in a hanging*: ${stats.suggestionsHung} ${stats.wordsSuggested != 0 ? "(" + Math.round(100 * stats.suggestionsHung / stats.wordsSuggested) + "%)" : ""}`
+                    }
+                },
+                {
+                    "type": "divider",
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": `*Leaderboard*\n\n*Most guesses:*\n${ leaderboard.mostTotalGuesses.map(val => `• <@${val.player}> (${val.totalGuesses})`).join('\n') }\n\n*Most game winning guesses*:\n${ leaderboard.mostWinningGuesses.map(val => `• <@${val.player}> (${val.winningGuesses})`).join('\n') }\n\n*Most words suggested*:\n${ leaderboard.mostWordsSuggested.map(val => `• <@${val.player}> (${val.wordsSuggested})`).join('\n') }`
                     }
                 }
             ]

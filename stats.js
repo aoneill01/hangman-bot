@@ -24,8 +24,24 @@ function playerStats(player) {
     if (s.correctGuesses === undefined) s.correctGuesses = 0;
     if (s.winningGuesses === undefined) s.winningGuesses = 0;
     if (s.wordsSuggested === undefined) s.wordsSuggested = 0;
-    if (s.suggestionsGuessed === undefined) s.suggestionsGuessed = 0;
+    if (s.suggestionsHung === undefined) s.suggestionsHung = 0;
     return s;
+}
+
+function getLeaderboard() {
+    return {
+        mostTotalGuesses: topForProperty('totalGuesses'),
+        mostWinningGuesses: topForProperty('winningGuesses'),
+        mostWordsSuggested: topForProperty('wordsSuggested')
+    };
+}
+
+function topForProperty(property) {
+    return Object.keys(stats.players)
+        .map(player => ({ player, [property]: stats.players[player][property] || 0 }))
+        .sort((a, b) => b[property] - a[property])
+        .filter(val => val[property] !== 0)
+        .slice(0, 3);
 }
 
 function updateStatsForGuess(player, isCorrect, isFinalLetter) {
@@ -44,7 +60,7 @@ function updateStatsForNewGame(suggester) {
 }
 
 function updateStatsForCompletedGame(suggester, isSuccessful) {
-    if (isSuccessful) playerStats(suggester).suggestionsGuessed++;
+    if (!isSuccessful) playerStats(suggester).suggestionsHung++;
     writeStats();
 }
 
@@ -54,6 +70,7 @@ if (fs.existsSync(filename)) {
 
 module.exports = {
     getStats,
+    getLeaderboard,
     updateStatsForGuess,
     updateStatsForNewGame,
     updateStatsForCompletedGame
