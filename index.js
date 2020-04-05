@@ -128,7 +128,7 @@ app.event('app_home_opened', async({ event, context }) => {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": `*Personal Statistics*\n\n*Letters guessed*: ${stats.totalGuesses}\n*Correct guesses*: ${stats.correctGuesses} ${stats.totalGuesses != 0 ? "(" + Math.round(100 * stats.correctGuesses / stats.totalGuesses) + "%)" : ""}\n*Game winning guesses*: ${stats.winningGuesses}\n*Words suggested*: ${stats.wordsSuggested}\n*Your words resulting in a hanging*: ${stats.suggestionsHung} ${stats.wordsSuggested != 0 ? "(" + Math.round(100 * stats.suggestionsHung / stats.wordsSuggested) + "%)" : ""}`
+                        "text": `:chart_with_upwards_trend: *Personal Statistics* :chart_with_downwards_trend:\n\n*Letters guessed*: ${stats.totalGuesses}\n*Correct guesses*: ${stats.correctGuesses} ${stats.totalGuesses != 0 ? "(" + Math.round(100 * stats.correctGuesses / stats.totalGuesses) + "%)" : ""}\n*Game winning guesses*: ${stats.winningGuesses}\n*Words suggested*: ${stats.wordsSuggested}\n*Your words resulting in a hanging*: ${stats.suggestionsHung} ${stats.wordsSuggested != 0 ? "(" + Math.round(100 * stats.suggestionsHung / stats.wordsSuggested) + "%)" : ""}`
                     }
                 },
                 {
@@ -138,7 +138,7 @@ app.event('app_home_opened', async({ event, context }) => {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": `*Leaderboard*\n\n*Best guesses:* (% correct, min. 20 guesses)\n${ formatList(leaderboard.bestGuesses, val => `${Math.round(val.percentage)}%`) }\n\n*Most guesses:*\n${ formatList(leaderboard.mostTotalGuesses, val => val.totalGuesses) }\n\n*Most game winning guesses*:\n${ formatList(leaderboard.mostWinningGuesses, val => val.winningGuesses) }\n\n*Deadliest wordsmith*: (% lost, min. 5 words)\n${ formatList(leaderboard.deadliestWords, val => `${Math.round(val.percentage)}%`) }\n\n*Most words suggested*:\n${ formatList(leaderboard.mostWordsSuggested, val => val.wordsSuggested) }`
+                        "text": `:trophy: *Leaderboards* :trophy:\n\n*Most accurate* (% correct, min. 20 letters)\n${ formatList(leaderboard.bestGuesses, val => `${Math.round(val.percentage)}%`) }\n\n*Most guesses*\n${ formatList(leaderboard.mostTotalGuesses, val => val.totalGuesses) }\n\n*Most game winning guesses*\n${ formatList(leaderboard.mostWinningGuesses, val => val.winningGuesses) }\n\n*Deadliest wordsmiths* (% hanged, min. 5 words)\n${ formatList(leaderboard.deadliestWords, val => `${Math.round(val.percentage)}%`) }\n\n*Most words suggested*\n${ formatList(leaderboard.mostWordsSuggested, val => val.wordsSuggested) }`
                     }
                 }
             ]
@@ -147,7 +147,8 @@ app.event('app_home_opened', async({ event, context }) => {
 });
 
 function formatList(list, getValue) {
-    return list.map(val => `• <@${val.player}> (${getValue(val)})`).join('\n');
+    const emoji = [':first_place_medal:', ':second_place_medal:', ':third_place_medal:'];
+    return list.map((val, i) => `${emoji[i]} <@${val.player}> (${getValue(val)})`).join('\n');
 }
 
 function randomEmoji(options) {
