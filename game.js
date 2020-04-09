@@ -1,4 +1,4 @@
-const { updateStatsForGuess, updateStatsForNewGame, updateStatsForCompletedGame }  = require('./stats');
+const { updateStatsForGuess, updateStatsForNewGame, updateStatsForCompletedGame, addWord }  = require('./stats');
 
 const Status = {
     NOT_STARTED: 'not_started',
@@ -61,6 +61,7 @@ class HangmanGame {
             updateStatsForGuess(player, this.#word.includes(letter), won);
             if (won || lost) {
                 updateStatsForCompletedGame(this.userName, won);
+                addWord(this.word);
             }
         }
     }
