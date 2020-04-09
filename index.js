@@ -2,7 +2,7 @@ const { App } = require('@slack/bolt');
 const Typo = require('typo-js');
 const wd = require('word-definition');
 const { HangmanGame, Status, createGame, getGame } = require('./game');
-const { getStats, getLeaderboard } = require('./stats');
+const { getStats, getLeaderboard, getRecentWords } = require('./stats');
 
 const app = new App({
     signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -19,6 +19,16 @@ app.command('/hangman', async ({ ack, command, context, say }) => {
         ephemeralAck('Suggestion must be a single word, only letters.', ack);
         return;
     } 
+
+    if (command.text.length < 5) {
+        ephemeralAck('Let\'s give them a chance with a word that is at least 5 letters.', ack);
+        return;
+    }
+
+    if (getRecentWords().includes(command.text.toUpperCase())) {
+        ephemeralAck('Your word was recently used. Try another one!', ack);
+        return;
+    }
 
     const existingGame = getGame(command.channel_id);
 
@@ -118,7 +128,7 @@ app.event('app_home_opened', async({ event, context }) => {
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "*Welcome to Hangman*\n\nPlay a game of hangman with other people in a channel.\n\n*How to use*\n\n1. *Required*: Add this *hangman app* to the channel where you want to play.\n2. In the channel, use the slash command `/hangman [word]` to start a new game. _Don't worry, other users in the channel won't see the word._\n3. Everyone in the channel can guess letters by posting messages with a single letter."
+                      "text": `*Welcome to Hangman*\n\nPlay a game of hangman with other people in a channel.\n\n*How to use*\n\n1. *Required*: Add this *hangman app* to the channel where you want to play.\n2. In the channel, use the slash command \`/hangman [word]\` to start a new game. _Don't worry, other users in the channel won't see the word._\n3. Everyone in the channel can guess letters by posting messages with a single letter.\n\nRecent words: ${getRecentWords().join(', ')}`
                     }
                 },
                 {

@@ -4,7 +4,8 @@ const path = require('path');
 const filename = path.join(__dirname, 'stats.json');
 
 let stats = {
-    players: {}
+    players: {},
+    recentWords: []
 };
 
 function getStats(player) {
@@ -75,6 +76,16 @@ function updateStatsForCompletedGame(suggester, isSuccessful) {
     writeStats();
 }
 
+function addWord(word) {
+    stats.recentWords.unshift(word);
+    if (stats.recentWords.length > 10) stats.recentWords.splice(10);
+    writeStats();
+}
+
+function getRecentWords() {
+    return stats.recentWords.slice(0);
+}
+
 if (fs.existsSync(filename)) {
     stats = JSON.parse(fs.readFileSync(filename));
 }
@@ -84,6 +95,8 @@ module.exports = {
     getLeaderboard,
     updateStatsForGuess,
     updateStatsForNewGame,
-    updateStatsForCompletedGame
+    updateStatsForCompletedGame,
+    addWord,
+    getRecentWords
 };
 
