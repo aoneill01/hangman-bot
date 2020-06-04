@@ -17,6 +17,7 @@ _Notes to myself for if I need to host it again._
 * Subscribe to bot events:
   * `message.channels`
   * `message.im`
+  * `message.groups`
 * Add additional scopes:
   * `chat.write`
   * `reactions.write`
