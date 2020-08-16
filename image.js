@@ -99,9 +99,9 @@ function updateCanvas(canvas, word, guesses, incorrectCount) {
       startY
     );
     if (guesses[i] === guesses[i].toUpperCase()) {
-      rc.circle(startX + width / 2, startY - width / 2, 30, correctOptions);
+      rc.circle(startX + length / 2, startY - length / 2, 30, correctOptions);
     } else {
-      rc.line(startX + width, startY - width, startX, startY, incorrectOptions);
+      rc.line(startX + length, startY - length, startX, startY, incorrectOptions);
     }
   }
 }

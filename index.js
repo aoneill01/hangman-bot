@@ -75,11 +75,11 @@ app.command('/hangman', async ({ ack, command, context, say }) => {
 
     console.log(`Starting game with ${game.word}.`);
 
-    const result = await app.client.chat.postMessage({
+    const result = await retry(async() => app.client.chat.postMessage({
         token: context.botToken,
         channel: command.channel_id,
         blocks: generateMessage(game)
-    });
+    }));
 
     game.messageDetails = {
         channel: result.channel,
@@ -117,12 +117,13 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
 
     game.guessLetter(letter, message.user);
 
-    app.client.chat.update({
+    react(randomEmoji(game.word.includes(letter) ? successEmoji : failureEmoji), context.botToken, message);
+
+    await retry(() =>  app.client.chat.update({
         ...game.messageDetails,
         blocks: generateMessage(game)
-    });
+    }));
 
-    react(randomEmoji(game.word.includes(letter) ? successEmoji : failureEmoji), context.botToken, message);
 
     if (game.status == Status.WON || game.status == Status.LOST) {
         wd.getDef(game.word, 'en', null, definition => {
@@ -253,6 +254,19 @@ function react(name, token, message) {
         channel: message.channel,
         timestamp: message.ts
     });
+}
+
+async function retry(action) {
+    let retries = 0;
+    while (true) {
+        try {
+            return action();
+        } catch (err) {
+            console.error(err);
+            if (retries++ === 5) throw err;
+            await new Promise(resolve => setTimeout(resolve, 10000));
+        }
+    }
 }
 
 (async () => {
