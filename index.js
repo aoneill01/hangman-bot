@@ -1,12 +1,39 @@
-const { App } = require('@slack/bolt');
+const { App, ExpressReceiver } = require('@slack/bolt');
 const Typo = require('typo-js');
 const wd = require('word-definition');
+const GIFEncoder = require("gif-encoder-2");
+const { createCanvas } = require("canvas");
 const { HangmanGame, Status, createGame, getGame } = require('./game');
 const { getStats, getLeaderboard, getRecentWords } = require('./stats');
+const { updateCanvas } = require('./image.js');
 
+
+const receiver = new ExpressReceiver({ signingSecret: process.env.SLACK_SIGNING_SECRET });
 const app = new App({
-    signingSecret: process.env.SLACK_SIGNING_SECRET,
     token: process.env.SLACK_BOT_TOKEN,
+    receiver,
+});
+
+receiver.router.get("/image", ({ query: { word, guesses, incorrectCount } }, res) => {
+  res.set("Content-Type", "image/gif");
+
+  const encoder = new GIFEncoder(500, 200, "octree", false);
+  encoder.createReadStream().pipe(res);
+
+  encoder.start();
+  encoder.setRepeat(0);
+  encoder.setDelay(300);
+  encoder.setQuality(30);
+
+  const canvas = createCanvas(500, 200);
+  const context = canvas.getContext("2d");
+
+  for (let i = 0; i < 3; i++) {
+    updateCanvas(canvas, word, guesses, +incorrectCount);
+    encoder.addFrame(context);
+  }
+
+  encoder.finish();
 });
 
 const successEmoji = [ 'tada', 'parrot', 'white_check_mark', 'banana-dance', 'gopher-dance' ];
@@ -51,7 +78,7 @@ app.command('/hangman', async ({ ack, command, context, say }) => {
     const result = await app.client.chat.postMessage({
         token: context.botToken,
         channel: command.channel_id,
-        text: generateMessage(game)
+        blocks: generateMessage(game)
     });
 
     game.messageDetails = {
@@ -92,7 +119,7 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
 
     app.client.chat.update({
         ...game.messageDetails,
-        text: generateMessage(game)
+        blocks: generateMessage(game)
     });
 
     react(randomEmoji(game.word.includes(letter) ? successEmoji : failureEmoji), context.botToken, message);
@@ -167,15 +194,8 @@ function randomEmoji(options) {
 
 function generateMessage(game) {
     const incorrectCount = game.calculateIncorrectCount();
-    let message = `Word suggested by <@${game.userName}>.\n\`\`\`
- ━━┳━━┓ 
-   ${incorrectCount > 0 ? '☹︎' : ' '}  ┃
-  ${incorrectCount > 4 ? '/' : ' '}${incorrectCount > 1 ? '|' : ' '}${incorrectCount > 5 ? '\\' : ' '} ┃        ${blanksString(game)}
-  ${incorrectCount > 2 ? '/' : ' '} ${incorrectCount > 3 ? '\\' : ' '} ┃
-   ━━━┻━━━
-${guessesString(game)}
-\`\`\``;
 
+    let message = `Word suggested by <@${game.userName}>.`
     if (game.status == Status.LOST) {
         message += `\n:skull_and_crossbones: *You lose. The word was ${game.word}.* :skull_and_crossbones: Suggest a new word with \`/hangman [word]\``;
     } else if (game.status == Status.WON) {
@@ -184,15 +204,39 @@ ${guessesString(game)}
         message += `\n_Please reply in thread._`;
     }
 
-    return message;
+
+    return [
+        {
+            type: "image",
+            image_url: `http://hangman.do.aoneill.com/image?word=${blanksString(game)}&guesses=${guessesString(game)}&incorrectCount=${incorrectCount}`,
+            alt_text: "hangman",
+        },
+        {
+            type: "context",
+            elements: [
+                {
+                    type: "mrkdwn",
+                    text: message,
+                },
+            ],
+        },
+    ];
 }
 
 function guessesString(game) {
-    return game.guesses.reduce((acc, c) => `${acc} ${c}${game.word.includes(c) ? '✔' : '✗'}`, '');
+    return game.guesses.reduce((acc, c) => `${acc}${game.word.includes(c) ? c.toUpperCase() : c.toLowerCase()}`, '');
 }
 
 function blanksString(game) {
-    return Array.from(game.word).reduce((acc, c) => `${acc} ${game.guesses.includes(c) ? c : '_'}`, '');
+    return Array.from(game.word).reduce((acc, c) => {
+        if (game.guesses.includes(c)) {
+            return acc + c.toUpperCase();
+        }
+        if (game.status === Status.LOST) {
+            return acc + c.toLowerCase();
+        }
+        return acc + "_";
+    }, '');
 }
 
 function ephemeralAck(text, ack) {
