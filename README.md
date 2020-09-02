@@ -4,7 +4,7 @@ Slack bot for playing Hangman.
 
 ![Screenshot](http://hangman.do.aoneill.com/image?word=cActUs&guesses=eiArUlfm&incorrectCount=6)
 
-1. Add to bot to channel
+1. Add bot to channel
 2. Start a new game by `/hangman [word]`
 3. Guess letters by posting messages consisting of a single letter
 
