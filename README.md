@@ -2,7 +2,7 @@
 
 Slack bot for playing Hangman.
 
-![Screenshot](screenshot.png)
+![Screenshot](http://hangman.do.aoneill.com/image?word=cActUs&guesses=eiArUlfm&incorrectCount=6)
 
 1. Add to bot to channel
 2. Start a new game by `/hangman [word]`

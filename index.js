@@ -6,7 +6,7 @@ const { createCanvas } = require("canvas");
 const { HangmanGame, Status, createGame, getGame } = require('./game');
 const { getStats, getLeaderboard, getRecentWords } = require('./stats');
 const { updateCanvas } = require('./image.js');
-
+const { cache, streamToString } = require('./cache.js');
 
 const receiver = new ExpressReceiver({ signingSecret: process.env.SLACK_SIGNING_SECRET });
 const app = new App({
@@ -14,11 +14,13 @@ const app = new App({
     receiver,
 });
 
-receiver.router.get("/image", ({ query: { word, guesses, incorrectCount } }, res) => {
+receiver.router.get("/image", cache(60 * 5, "image/gif"), async ({ query: { word, guesses, incorrectCount } }, res) => {
+  console.log(`Generating image for ${word} ${guesses} ${incorrectCount}`)
   res.set("Content-Type", "image/gif");
 
   const encoder = new GIFEncoder(500, 200, "octree", false);
-  encoder.createReadStream().pipe(res);
+  const stream = encoder.createReadStream();
+  stream.setEncoding("binary");
 
   encoder.start();
   encoder.setRepeat(0);
@@ -34,6 +36,8 @@ receiver.router.get("/image", ({ query: { word, guesses, incorrectCount } }, res
   }
 
   encoder.finish();
+
+  res.send(Buffer.from(await streamToString(stream), "binary"));
 });
 
 const successEmoji = [ 'tada', 'parrot', 'white_check_mark', 'banana-dance', 'gopher-dance' ];
@@ -119,7 +123,7 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
 
     react(randomEmoji(game.word.includes(letter) ? successEmoji : failureEmoji), context.botToken, message);
 
-    await retry(() =>  app.client.chat.update({
+    retry(() =>  app.client.chat.update({
         ...game.messageDetails,
         blocks: generateMessage(game)
     }));
@@ -260,7 +264,7 @@ async function retry(action) {
     let retries = 0;
     while (true) {
         try {
-            return action();
+            return await action();
         } catch (err) {
             console.error(err);
             if (retries++ === 5) throw err;
