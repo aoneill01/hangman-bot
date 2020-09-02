@@ -18,7 +18,7 @@ const app = new App({
 
 receiver.router.get(
   "/image",
-  cache(60 * 5, "image/gif"),
+  cache(60 * 60, "image/gif"),
   async ({ query: { word, guesses, incorrectCount } }, res) => {
     console.log(`Generating image for ${word} ${guesses} ${incorrectCount}`);
     res.set("Content-Type", "image/gif");
