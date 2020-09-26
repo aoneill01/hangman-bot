@@ -60,8 +60,6 @@ const failureEmoji = [
   "coffin",
 ];
 
-const dictionary = new Typo("en_US");
-
 app.command("/hangman", async ({ ack, command, context, say }) => {
   if (!/^[a-zA-Z]+$/.test(command.text)) {
     ephemeralAck("Suggestion must be a single word, only letters.", ack);

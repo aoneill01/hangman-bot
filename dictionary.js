@@ -15,8 +15,6 @@ async function lookupWord(word) {
 
   const json = await response.json();
 
-  console.log("Response from dictionary api", json);
-
   if (json.length && typeof json[0] === "object") {
     return {
       foundWord: true,
