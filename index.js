@@ -1,12 +1,11 @@
 const { App, ExpressReceiver } = require("@slack/bolt");
-const Typo = require("typo-js");
-const wd = require("word-definition");
 const GIFEncoder = require("gif-encoder-2");
-const { createCanvas } = require("canvas");
-const { HangmanGame, Status, createGame, getGame } = require("./game");
-const { getStats, getLeaderboard, getRecentWords } = require("./stats");
-const { updateCanvas } = require("./image.js");
 const { cache, streamToString } = require("./cache.js");
+const { createCanvas } = require("canvas");
+const { lookupWord } = require("./dictionary");
+const { Status, createGame, getGame } = require("./game");
+const { updateCanvas } = require("./image.js");
+const { getStats, getLeaderboard, getRecentWords } = require("./stats");
 
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -61,8 +60,6 @@ const failureEmoji = [
   "coffin",
 ];
 
-const dictionary = new Typo("en_US");
-
 app.command("/hangman", async ({ ack, command, context, say }) => {
   if (!/^[a-zA-Z]+$/.test(command.text)) {
     ephemeralAck("Suggestion must be a single word, only letters.", ack);
@@ -89,15 +86,20 @@ app.command("/hangman", async ({ ack, command, context, say }) => {
       "Please finish the current game before suggesting a new word.",
       ack
     );
+    app.client.chat.update({
+      ...game.messageDetails,
+      blocks: generateMessage(game),
+    });
     return;
   }
 
-  if (!dictionary.check(command.text)) {
+  const definition = await lookupWord(command.text);
+  if (!definition.foundWord) {
     ephemeralAck(
       `I could not find ${
         command.text
-      } in my dictionary. Did you mean ${dictionary
-        .suggest(command.text)
+      } in my dictionary. Did you mean ${definition.suggestions
+        .slice(0, 5)
         .join(", ")}?`,
       ack
     );
@@ -109,7 +111,8 @@ app.command("/hangman", async ({ ack, command, context, say }) => {
   const game = createGame(
     command.channel_id,
     command.text.toUpperCase(),
-    command.user_id
+    command.user_id,
+    definition.defintion
   );
 
   console.log(`Starting game with ${game.word}.`);
@@ -172,19 +175,14 @@ app.message(/^([a-zA-Z])[!?]*$/, async ({ context, message, say }) => {
   );
 
   if (game.status == Status.WON || game.status == Status.LOST) {
-    wd.getDef(game.word, "en", null, (definition) => {
-      console.log("deifnition", definition);
-      if (definition && definition.definition) {
-        if (message.thread_ts) {
-          say({
-            thread_ts: message.thread_ts,
-            text: `*${game.word}*: ${definition.definition}`,
-          });
-        } else {
-          say(`*${game.word}*: ${definition.definition}`);
-        }
-      }
-    });
+    if (message.thread_ts) {
+      say({
+        thread_ts: message.thread_ts,
+        text: `*${game.word}*: ${game.definition}`,
+      });
+    } else {
+      say(`*${game.word}*: ${game.definition}`);
+    }
   }
 });
 

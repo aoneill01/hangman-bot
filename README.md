@@ -23,6 +23,8 @@ _Notes to myself for if I need to host it again._
   * `reactions.write`
 * Add `/hangman [word]` slash command, using same endpoint as events
 * Host the bot somewhere, such as the [Node.js Quickstart](https://cloud.digitalocean.com/marketplace/5df3a5a374ec0f0d4d2c0085?i=0163e6) droplet
+* Get an API key from [https://dictionaryapi.com/](https://dictionaryapi.com/) for definition lookups
 * Run `index.js` with Node, with the following environment variables set:
+  * `DICTIONARY_API_KEY`
   * `SLACK_SIGNING_SECRET`
   * `SLACK_BOT_TOKEN`
