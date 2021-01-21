@@ -47,10 +47,10 @@ receiver.router.get(
 
 const successEmoji = [
   "tada",
-  "parrot",
+  "partyparrot",
   "white_check_mark",
   "banana-dance",
-  "gopher-dance",
+  "success",
 ];
 const failureEmoji = [
   "skull_and_crossbones",
