@@ -363,6 +363,76 @@ async function retry(action) {
   }
 }
 
+// Begin Wordle section
+
+const { generateImage } = require("./generateImage");
+
+const wordleGame = {
+  guesses: [],
+  solution: null,
+  messageDetails: {
+    channel: null,
+    ts: null,
+    token: null,
+  },
+};
+
+app.command("/wordle", async ({ ack, command, context }) => {
+  if (!/^[a-z]{5}$/i.test(command.text)) {
+    await ack({
+      text: "Word must be 5 letters",
+      response_type: "ephemeral",
+    });
+    return;
+  }
+
+  wordleGame.solution = command.text.toLowerCase();
+  wordleGame.guesses = [];
+
+  ack();
+
+  const result = await app.client.chat.postMessage({
+    token: context.botToken,
+    channel: command.channel_id,
+    blocks: getBlocks(),
+  });
+
+  wordleGame.messageDetails = {
+    channel: result.channel,
+    ts: result.ts,
+    token: context.botToken,
+  };
+});
+
+app.message(/^[a-z]{5}\?$/i, async ({ context }) => {
+  if (wordleGame.guesses.length < 5) {
+    wordleGame.guesses.push(context.matches[1].toLowerCase());
+  }
+
+  ack();
+
+  return app.client.chat.update({
+    ...wordleGame.messageDetails,
+    blocks: getBlocks(),
+  });
+});
+
+const getBlocks = () => [
+  {
+    type: "image",
+    image_url: `http://hangman.do.aoneill.com/wordle?v=${Math.random()}`,
+    alt_text: "Wordle",
+  },
+];
+
+receiver.router.get(`/wordle`, async function (req, res) {
+  const image = await generateImage(game.guesses, game.solution);
+  res.writeHead(200, { "Content-Type": "image/png" });
+  res.end(image, "binary");
+});
+
+// End Wordle section
+
 (async () => {
   // Start the app
   await app.start(process.env.PORT || 3000);
