@@ -14,6 +14,7 @@ async function generateImage(guesses, solution) {
   }
 
   const image = await nodeHtmlToImage({
+    puppeteerArgs: { args: ["--no-sandbox"] },
     output,
     html: `<html>
     <style>

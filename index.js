@@ -404,12 +404,10 @@ app.command("/wordle", async ({ ack, command, context }) => {
   };
 });
 
-app.message(/^[a-z]{5}\?$/i, async ({ context }) => {
+app.message(/^([a-z]{5})\?$/i, async ({ context }) => {
   if (wordleGame.guesses.length < 5) {
     wordleGame.guesses.push(context.matches[1].toLowerCase());
   }
-
-  ack();
 
   return app.client.chat.update({
     ...wordleGame.messageDetails,
@@ -426,7 +424,7 @@ const getBlocks = () => [
 ];
 
 receiver.router.get(`/wordle`, async function (req, res) {
-  const image = await generateImage(game.guesses, game.solution);
+  const image = await generateImage(wordleGame.guesses, wordleGame.solution);
   res.writeHead(200, { "Content-Type": "image/png" });
   res.end(image, "binary");
 });
