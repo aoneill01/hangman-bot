@@ -367,17 +367,14 @@ async function retry(action) {
 
 const { generateImage } = require("./generateImage");
 
-const wordleGame = {
-  guesses: [],
-  solution: null,
-  messageDetails: {
-    channel: null,
-    ts: null,
-    token: null,
-  },
+const wordleGames = {
+  new: {
+    solution: "     ",
+    guesses: [],
+  }
 };
 
-app.command("/wordle", async ({ ack, command, context }) => {
+app.command("/wordle", async ({ ack, command, context, say }) => {
   if (!/^[a-z]{5}$/i.test(command.text)) {
     await ack({
       text: "Word must be 5 letters",
@@ -386,15 +383,27 @@ app.command("/wordle", async ({ ack, command, context }) => {
     return;
   }
 
-  wordleGame.solution = command.text.toLowerCase();
-  wordleGame.guesses = [];
+  const definition = await lookupWord(command.text);
+  if (!definition.foundWord) {
+    await ack({
+      text: `I could not find ${command.text} in my dictionary`,
+      response_type: "ephemeral",
+    });
+    return;
+  }
+
+  const wordleGame = {
+    solution: command.text.toLowerCase(),
+    guesses: [],
+    user: command.user_id,
+  }
 
   ack();
 
   const result = await app.client.chat.postMessage({
     token: context.botToken,
     channel: command.channel_id,
-    blocks: getBlocks(),
+    blocks: getBlocks("new", wordleGame.user),
   });
 
   wordleGame.messageDetails = {
@@ -402,28 +411,64 @@ app.command("/wordle", async ({ ack, command, context }) => {
     ts: result.ts,
     token: context.botToken,
   };
+
+  wordleGames[result.ts] = wordleGame;
+
+  say({
+    thread_ts: result.ts,
+    text: "_Type a message in this thread with just a five-letter word to make a guess._",
+  })
 });
 
-app.message(/^([a-z]{5})\?$/i, async ({ context }) => {
-  if (wordleGame.guesses.length < 5) {
-    wordleGame.guesses.push(context.matches[1].toLowerCase());
+app.message(/^[a-z]{5}$/i, async ({ context, message, say }) => {
+  const wordleGame = wordleGames[message.thread_ts];
+
+  if (!wordleGame || wordleGame.guesses.length >= 6) return;
+
+  const guess = context.matches[0];
+  const definition = await lookupWord(guess);
+  if (!definition.foundWord) {
+    await say({
+      thread_ts: message.thread_ts,
+      text: `I could not find ${guess} in my dictionary`,
+    });
+    return;
   }
+
+  wordleGame.guesses.push(guess.toLowerCase());  
+
+  react(
+    "eyes",
+    context.botToken,
+    message
+  );
 
   return app.client.chat.update({
     ...wordleGame.messageDetails,
-    blocks: getBlocks(),
+    blocks: getBlocks(message.thread_ts, wordleGame.user),
   });
 });
 
-const getBlocks = () => [
+const getBlocks = (thread_ts, user) => [
   {
     type: "image",
-    image_url: `http://hangman.do.aoneill.com/wordle?v=${Math.random()}`,
+    image_url: `http://hangman.do.aoneill.com/wordle?thread_ts=${thread_ts}&v=${Math.random()}`,
     alt_text: "Wordle",
+  },
+  {
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: `Word suggested by <@${user}>`,
+      },
+    ],
   },
 ];
 
 receiver.router.get(`/wordle`, async function (req, res) {
+  const { thread_ts } = req.query;
+  const wordleGame = wordleGames[thread_ts] ?? { solution: "zzzzz", guesses: [" not ", "found"] };
   const image = await generateImage(wordleGame.guesses, wordleGame.solution);
   res.writeHead(200, { "Content-Type": "image/png" });
   res.end(image, "binary");
