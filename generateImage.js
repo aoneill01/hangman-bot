@@ -97,7 +97,7 @@ async function generateImage(guesses, solution) {
             ${[...new Array(6 - guesses.length)].map(emptyGuess).join("")}
         </div>
         <div id="used">
-            ${letters.map((letter) => htmlForUsed(letter, guesses, solution))}
+            ${letters.map((letter) => htmlForUsed(letter, guesses, solution)).join("")}
         </div>
     </body>
     </html>`,
