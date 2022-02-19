@@ -2,6 +2,10 @@ const fs = require("fs");
 const nodeHtmlToImage = require("node-html-to-image");
 const hash = require("object-hash");
 
+const letters = Array.from({ length: 26 }, (_, i) =>
+  String.fromCharCode("a".charCodeAt(0) + i)
+);
+
 const fileExists = (s) =>
   new Promise((r) => fs.access(s, fs.F_OK, (e) => r(!e)));
 
@@ -23,7 +27,7 @@ async function generateImage(guesses, solution) {
         margin: 0;
         padding: 0;
         width: 350px;
-        height: 420px;
+        height: 485px;
       }
       
       * {
@@ -55,27 +59,45 @@ async function generateImage(guesses, solution) {
       }
       
       .correct {
-        background-color: #6aaa64;
+        background-color: #6aaa64 !important;
         border: none;
         color: white;
       }
       
       .incorrect {
-        background-color: #787c7e;
+        background-color: #787c7e !important;
         border: none;
         color: white;
       }
       
       .present {
-        background-color: #c9b458;
+        background-color: #c9b458 !important;
         border: none;
         color: white;
+      }
+
+      #used {
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        grid-gap: 2px;
+        padding: 0 10px 10px 10px;
+      }
+      
+      #used > div {
+        text-align: center;
+        text-transform: uppercase;
+        background-color: #d3d6da;
+        padding: 5px 0;
+        border-radius: 4px;
       }
     </style>
     <body>
         <div id="board">
             ${guesses.map((guess) => htmlForGuess(guess, solution)).join("")}
             ${[...new Array(6 - guesses.length)].map(emptyGuess).join("")}
+        </div>
+        <div id="used">
+            ${letters.map((letter) => htmlForUsed(letter, guesses, solution))}
         </div>
     </body>
     </html>`,
@@ -108,6 +130,16 @@ function htmlForGuess(guess, solution) {
       else return `<div class="tile incorrect">${letter}</div>`;
     })
     .join("");
+}
+
+function htmlForUsed(letter, guesses, solution) {
+  if (guesses.some((guess) => guess.includes(letter))) {
+    if (solution.includes(letter)) {
+      return `<div class="correct">${letter}</div>`;
+    }
+    return `<div class="incorrect">${letter}</div>`;
+  }
+  return `<div>${letter}</div>`;
 }
 
 function emptyGuess() {
