@@ -9,7 +9,7 @@
   "author": "Andy O'Neill <aoneill01@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "@slack/bolt": "^2.1.0",
+    "@slack/bolt": "^3.12.2",
     "canvas": "^2.6.1",
     "gif-encoder-2": "^1.0.5",
     "memory-cache": "^0.2.0",
